@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>SOLMARA: Second Crossing</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0e1620;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif; }
+  #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  #hud { position: fixed; inset: 0; pointer-events: none; color: #fff;
+    text-shadow: 0 1px 3px rgba(0,0,0,.8); user-select: none; }
+  #wanted { position: absolute; top: 12px; left: 14px; font-size: 26px; letter-spacing: 2px; color: #ffd23e; }
+  #wanted .off { color: rgba(255,255,255,.28); }
+  #money { position: absolute; top: 14px; right: 16px; font-size: 20px; font-weight: 700; color: #7dff9b; }
+  #objective { position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+    background: rgba(8,18,28,.72); border: 1px solid rgba(255,255,255,.25); border-radius: 8px;
+    padding: 8px 16px; font-size: 15px; text-align: center; max-width: 46vw; }
+  #objective b { color: #ffd23e; }
+  #speed { position: absolute; right: 18px; bottom: 16px; text-align: right; font-weight: 800; }
+  #speed .num { font-size: 40px; line-height: 1; }
+  #speed .unit { font-size: 13px; color: #cfe6ff; }
+  #speed .gear { font-size: 13px; color: #ffd23e; }
+  #prompt { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%);
+    background: rgba(8,18,28,.78); border: 1px solid #ffd23e; border-radius: 8px;
+    padding: 8px 14px; font-size: 15px; display: none; }
+  #prompt b { background: #ffd23e; color: #111; border-radius: 4px; padding: 1px 7px; margin-right: 6px; }
+  #toast { position: absolute; left: 50%; top: 84px; transform: translateX(-50%);
+    font-size: 19px; font-weight: 700; color: #ffd23e; display: none; text-align: center; }
+  #minimap { position: absolute; left: 14px; bottom: 14px; width: 168px; height: 168px;
+    border: 2px solid rgba(255,255,255,.45); border-radius: 50%; background: rgba(8,18,28,.72); }
+  #health { position: absolute; left: 14px; bottom: 196px; width: 168px; }
+  #health .bar { height: 8px; background: rgba(255,255,255,.25); border-radius: 4px; overflow: hidden; }
+  #health .fill { height: 100%; width: 100%; background: #37d67a; }
+  #health .lbl { font-size: 11px; color: #cfe6ff; margin-top: 2px; }
+  #overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(180deg, rgba(6,14,24,.82), rgba(20,8,20,.86)); color: #fff; z-index: 5; }
+  #overlay .card { max-width: 620px; padding: 28px 34px; text-align: center; }
+  #overlay h1 { margin: 0; font-size: 52px; letter-spacing: 4px; color: #ffd23e; }
+  #overlay h2 { margin: 4px 0 14px; font-size: 19px; font-weight: 400; color: #9fd8ff; letter-spacing: 2px; }
+  #overlay p { font-size: 15px; line-height: 1.55; color: #e8f1f8; }
+  #overlay .keys { font-size: 13px; color: #b9c9d6; line-height: 1.9; margin: 12px 0 20px; }
+  #overlay .keys b { color: #ffd23e; }
+  #startBtn { pointer-events: auto; cursor: pointer; font-size: 19px; font-weight: 800;
+    background: #ffd23e; color: #14202c; border: none; border-radius: 10px; padding: 13px 34px; }
+  #startBtn:hover { background: #ffe27a; }
+  #banner { position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+    pointer-events: none; z-index: 4; }
+  #banner .box { background: rgba(8,18,28,.88); border: 2px solid #ffd23e; border-radius: 14px;
+    padding: 22px 40px; text-align: center; color: #fff; }
+  #banner h3 { margin: 0 0 6px; font-size: 30px; color: #ffd23e; }
+  #banner p { margin: 0; font-size: 15px; }
+  #status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+</style>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.min.js" } }
+</script>
+</head>
+<body>
+<canvas id="scene"></canvas>
+<div id="hud">
+  <div id="wanted"></div>
+  <div id="money">$ 0</div>
+  <div id="objective"><b id="objName">MARINA PICKUP</b><br><span id="objText">Pergi ke mobil di garasi</span></div>
+  <div id="health"><div class="bar"><div class="fill" id="hpFill"></div></div><div class="lbl">RAKA — NYAWA</div></div>
+  <canvas id="minimap" width="336" height="336"></canvas>
+  <div id="speed"><div class="num" id="speedNum">0</div><div class="unit">km/jam</div><div class="gear" id="gearTxt">JALAN KAKI</div></div>
+  <div id="prompt"></div>
+  <div id="toast"></div>
+</div>
+<div id="banner"><div class="box"><h3 id="bannerTitle"></h3><p id="bannerText"></p></div></div>
+<div id="overlay"><div class="card">
+  <h1>SOLMARA</h1>
+  <h2>SECOND CROSSING</h2>
+  <p>Kota pelabuhan Solmara. Raka, kurir baru Bos Dimas, harus membuktikan diri:
+  ambil paket di Marina, antar pulang ke garasi — tanpa menarik perhatian polisi pelabuhan.
+  Satu blok kota, dua penyeberangan, dan satu malam yang menentukan.</p>
+  <div class="keys">
+    <b>W A S D</b> bergerak / mengemudi &nbsp;·&nbsp; <b>E</b> masuk / keluar mobil &nbsp;·&nbsp; <b>Spasi</b> rem tangan<br>
+    <b>Mouse drag</b> putar kamera &nbsp;·&nbsp; <b>R</b> ulang misi &nbsp;·&nbsp; <b>P</b> jeda &nbsp;·&nbsp; <b>M</b> suara
+  </div>
+  <button id="startBtn">MULAI — MARINA PICKUP</button>
+  <p style="font-size:12px;color:#8fa8bc">Kota, karakter, dan kendaraan 100% orisinal. Tanpa jaringan saat bermain.</p>
+</div></div>
+<p id="status" role="status" aria-live="polite"></p>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
